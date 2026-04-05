@@ -4,7 +4,7 @@
 pub const GRAVITY: f32 = 98.0;
 
 /// Maximum projectile velocity at 100% power.
-pub const MAX_VELOCITY: f32 = 200.0;
+pub const MAX_VELOCITY: f32 = 350.0;
 
 /// Physics simulation timestep in seconds.
 pub const PHYSICS_DT: f32 = 1.0 / 60.0;
@@ -47,6 +47,14 @@ pub const CRITICAL_HIT_MULTIPLIER: f32 = 1.5;
 /// Wind speed range: uniform(-MAX_WIND, MAX_WIND).
 pub const MAX_WIND: f32 = 5.0;
 
+// --- Movement ---
+
+/// How far a tank can move per turn (world units).
+pub const TANK_MOVE_BUDGET: f32 = 30.0;
+
+/// How many units each keypress moves the tank.
+pub const TANK_MOVE_STEP: f32 = 3.0;
+
 // --- Rendering ---
 
 /// Target frames per second for TUI rendering.
@@ -57,3 +65,6 @@ pub const FRAME_DURATION_MS: u64 = 1000 / TARGET_FPS as u64;
 
 /// Projectile trail length (number of past positions to render).
 pub const TRAIL_LENGTH: usize = 15;
+
+/// Number of physics steps to show in the aiming trajectory preview.
+pub const TRAJECTORY_PREVIEW_STEPS: usize = 80;

@@ -94,11 +94,12 @@ fn show_title_screen(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> i
                  Inspired by Scorched Earth (1991)\n\
                  \n\
                  Controls:\n\
-                   h/Left  l/Right   -  Adjust angle\n\
-                   k/Up    j/Down    -  Adjust power\n\
-                   Tab               -  Switch ammo\n\
-                   Space / Enter     -  Fire!\n\
-                   Q                 -  Quit\n\
+                   h/Left  l/Right  -  Adjust angle\n\
+                   k/Up    j/Down   -  Adjust power\n\
+                   a/d              -  Move tank\n\
+                   Tab              -  Switch ammo\n\
+                   Space / Enter    -  Fire!\n\
+                   Q                -  Quit\n\
                  \n\
                  Press any key to start...",
                 TITLE_ART,

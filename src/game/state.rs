@@ -1,6 +1,7 @@
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
 
+use super::constants::*;
 use super::types::*;
 
 /// The current phase of the game — drives the entire game flow.
@@ -34,6 +35,8 @@ pub struct GameState {
     pub phase: GamePhase,
     pub turn_number: u32,
     pub shot_params: ShotParams,
+    /// Remaining movement budget for the current turn.
+    pub move_budget: f32,
 }
 
 impl GameState {
@@ -55,10 +58,16 @@ impl GameState {
         self.opponent_tank().position.x < self.current_tank().position.x
     }
 
-    /// Advance to the next living player's turn.
+    /// Save current shot params to the current tank, then advance turn.
     pub fn advance_turn(&mut self) {
+        // Save current player's shot params
+        self.tanks[self.current_player].last_shot_params = self.shot_params;
+        // Switch player
         self.current_player = 1 - self.current_player;
         self.turn_number += 1;
+        // Restore next player's shot params
+        self.shot_params = self.tanks[self.current_player].last_shot_params;
+        self.move_budget = TANK_MOVE_BUDGET;
         self.phase = GamePhase::Aiming;
     }
 

@@ -94,6 +94,29 @@ pub fn simulate_shot(
     (trail, ShotOutcome::OutOfBounds)
 }
 
+/// Generate a predicted trajectory for aiming preview.
+/// Returns positions for the first `steps` physics ticks (no collision check).
+pub fn predict_trajectory(
+    start: Vec2,
+    velocity: Vec2,
+    ammo: AmmoType,
+    wind: &Wind,
+    steps: usize,
+) -> Vec<Vec2> {
+    let mut projectile = Projectile {
+        position: start,
+        velocity,
+        ammo,
+    };
+
+    let mut trail = Vec::with_capacity(steps);
+    for _ in 0..steps {
+        projectile = step_projectile(&projectile, wind);
+        trail.push(projectile.position);
+    }
+    trail
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

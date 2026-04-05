@@ -40,8 +40,8 @@ impl AmmoType {
     /// Aerodynamic drag coefficient. Higher = more affected by wind and air resistance.
     pub fn drag_coefficient(self) -> f32 {
         match self {
-            AmmoType::Cannonball => 0.001,
-            AmmoType::Explosive => 0.003,
+            AmmoType::Cannonball => 0.00005,
+            AmmoType::Explosive => 0.0002,
         }
     }
 
@@ -70,7 +70,7 @@ pub struct Tank {
     pub health: f32,
     pub max_health: f32,
     pub is_ai: bool,
-    pub selected_ammo: AmmoType,
+    pub last_shot_params: ShotParams,
 }
 
 impl Tank {
@@ -82,7 +82,11 @@ impl Tank {
             health: 100.0,
             max_health: 100.0,
             is_ai,
-            selected_ammo: AmmoType::Explosive,
+            last_shot_params: ShotParams {
+                angle: 45.0,
+                power: 50.0,
+                ammo: AmmoType::Explosive,
+            },
         }
     }
 

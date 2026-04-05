@@ -23,8 +23,8 @@ pub fn render_hud(frame: &mut Frame, area: Rect, game: &GameState) {
                 "AI is thinking...".to_string()
             } else {
                 format!(
-                    "Turn {turn}  |  {name}  |  Angle: {angle:.0}\u{00b0}  |  Power: {power:.0}%  |  Ammo: {cb} {ex}  |  Wind: {wind} {arrow}\n\
-                     h/\u{2190} l/\u{2192}: Angle  k/\u{2191} j/\u{2193}: Power  Tab: Ammo  Space: Fire  Q: Quit",
+                    "Turn {turn}  |  {name}  |  Angle: {angle:.0}\u{00b0}  |  Power: {power:.0}%  |  Ammo: {cb} {ex}  |  Wind: {wind} {arrow}  |  Move: {move_left:.0}\n\
+                     h/\u{2190} l/\u{2192}: Angle  k/\u{2191} j/\u{2193}: Power  a/d: Move  Tab: Ammo  Space: Fire  Q: Quit",
                     turn = game.turn_number,
                     name = tank.name,
                     angle = game.shot_params.angle,
@@ -33,6 +33,7 @@ pub fn render_hud(frame: &mut Frame, area: Rect, game: &GameState) {
                     ex = ammo_indicator(AmmoType::Explosive, game.shot_params.ammo),
                     wind = format!("{:.1}", game.wind.speed),
                     arrow = game.wind.display_arrow(),
+                    move_left = game.move_budget,
                 )
             }
         }

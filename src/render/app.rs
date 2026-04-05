@@ -5,8 +5,6 @@ use glam::Vec2;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use ratatui::prelude::*;
-use ratatui::widgets::canvas::{Canvas, Points};
-use ratatui::widgets::{Block, Borders};
 
 use crate::ai::{calculate_ai_shot, AiDifficulty};
 use crate::game::constants::*;
@@ -15,8 +13,8 @@ use crate::game::state::*;
 use crate::game::types::*;
 use crate::physics::projectile::*;
 use crate::render::animation::TrajectoryAnimation;
+use crate::render::battlefield;
 use crate::render::hud::render_hud;
-use crate::render::terrain::TerrainShape;
 use crate::terrain::{generate_terrain, Heightmap};
 
 /// Top-level application state.
@@ -62,6 +60,7 @@ impl App {
                 power: 50.0,
                 ammo: AmmoType::Explosive,
             },
+            move_budget: TANK_MOVE_BUDGET,
         };
 
         Self {
@@ -126,7 +125,13 @@ impl App {
                     AmmoType::Cannonball => AmmoType::Explosive,
                     AmmoType::Explosive => AmmoType::Cannonball,
                 };
-                self.game.current_tank_mut().selected_ammo = self.game.shot_params.ammo;
+                self.game.current_tank_mut().last_shot_params.ammo = self.game.shot_params.ammo;
+            }
+            KeyCode::Char('a') => {
+                self.move_tank(-TANK_MOVE_STEP);
+            }
+            KeyCode::Char('d') => {
+                self.move_tank(TANK_MOVE_STEP);
             }
             KeyCode::Char(' ') | KeyCode::Enter => {
                 self.fire_shot();
@@ -161,6 +166,20 @@ impl App {
             }
             GamePhase::GameOver { .. } => {}
         }
+    }
+
+    fn move_tank(&mut self, dx: f32) {
+        if self.game.move_budget <= 0.0 {
+            return;
+        }
+        let step = dx.abs().min(self.game.move_budget);
+        let actual_dx = step * dx.signum();
+
+        let tank = self.game.current_tank_mut();
+        let new_x = (tank.position.x + actual_dx).clamp(10.0, WORLD_WIDTH - 10.0);
+        tank.position.x = new_x;
+        tank.position.y = self.terrain.height_at(new_x) + 2.0;
+        self.game.move_budget -= step;
     }
 
     fn fire_shot(&mut self) {
@@ -254,119 +273,14 @@ impl App {
             .constraints([Constraint::Min(10), Constraint::Length(4)])
             .split(frame.area());
 
-        self.render_battlefield(frame, chunks[0]);
+        battlefield::render_battlefield(
+            chunks[0],
+            frame.buffer_mut(),
+            &self.terrain,
+            &self.game,
+            &self.animation,
+            &self.impact_flash,
+        );
         render_hud(frame, chunks[1], &self.game);
-    }
-
-    fn render_battlefield(&self, frame: &mut Frame, area: Rect) {
-        let world_height = WORLD_CEILING as f64;
-        let world_width = self.terrain.width() as f64;
-
-        let canvas = Canvas::default()
-            .block(Block::default().borders(Borders::ALL))
-            .x_bounds([0.0, world_width])
-            .y_bounds([0.0, world_height])
-            .marker(symbols::Marker::Braille)
-            .paint(|ctx| {
-                // Draw terrain
-                ctx.draw(&TerrainShape {
-                    heightmap: &self.terrain,
-                    color: Color::Green,
-                });
-
-                // Draw tanks
-                for tank in &self.game.tanks {
-                    if tank.is_alive() {
-                        let color = if tank.id == 0 {
-                            Color::Cyan
-                        } else {
-                            Color::Red
-                        };
-                        // Tank body (small rectangle of points)
-                        let mut tank_points = Vec::new();
-                        for dx in -3..=3 {
-                            for dy in 0..=3 {
-                                tank_points
-                                    .push((tank.position.x as f64 + dx as f64, tank.position.y as f64 + dy as f64));
-                            }
-                        }
-                        ctx.draw(&Points {
-                            coords: &tank_points,
-                            color,
-                        });
-                    }
-                }
-
-                // Draw projectile trail
-                if let Some(ref anim) = self.animation {
-                    let trail = anim.trail();
-                    if trail.len() > 1 {
-                        // Trail fades from dark to bright
-                        let trail_coords: Vec<(f64, f64)> = trail
-                            .iter()
-                            .map(|p| (p.x as f64, p.y as f64))
-                            .collect();
-                        ctx.draw(&Points {
-                            coords: &trail_coords,
-                            color: Color::Yellow,
-                        });
-                    }
-
-                    // Current projectile position
-                    let pos = anim.current_position();
-                    let proj_points = [(pos.x as f64, pos.y as f64)];
-                    ctx.draw(&Points {
-                        coords: &proj_points,
-                        color: Color::White,
-                    });
-                }
-
-                // Impact flash
-                if let Some((pos, time)) = &self.impact_flash {
-                    if time.elapsed() < Duration::from_millis(500) {
-                        let radius = self.game.shot_params.ammo.crater_radius() as f64;
-                        ctx.draw(&crate::render::terrain::CraterFlash {
-                            x: pos.x as f64,
-                            y: pos.y as f64,
-                            radius,
-                            color: Color::LightYellow,
-                        });
-                    }
-                }
-
-                // Aiming indicator
-                if matches!(self.game.phase, GamePhase::Aiming)
-                    && !self.game.current_tank().is_ai
-                {
-                    let tank = self.game.current_tank();
-                    let facing_left = self.game.current_faces_left();
-                    let angle_rad = self.game.shot_params.angle.to_radians();
-                    let dir = if facing_left { -1.0 } else { 1.0 };
-                    let barrel_len = 15.0;
-                    let end_x = tank.position.x as f64 + angle_rad.cos() as f64 * barrel_len * dir;
-                    let end_y =
-                        (tank.position.y + 3.0) as f64 + angle_rad.sin() as f64 * barrel_len;
-
-                    // Draw barrel direction indicator
-                    let steps = 10;
-                    let barrel_points: Vec<(f64, f64)> = (0..=steps)
-                        .map(|i| {
-                            let t = i as f64 / steps as f64;
-                            (
-                                tank.position.x as f64
-                                    + t * (end_x - tank.position.x as f64),
-                                (tank.position.y + 3.0) as f64
-                                    + t * (end_y - (tank.position.y + 3.0) as f64),
-                            )
-                        })
-                        .collect();
-                    ctx.draw(&Points {
-                        coords: &barrel_points,
-                        color: Color::White,
-                    });
-                }
-            });
-
-        frame.render_widget(canvas, area);
     }
 }
