@@ -10,9 +10,7 @@ pub enum GamePhase {
     /// Player is adjusting angle/power/ammo.
     Aiming,
     /// Projectile is in flight (animated).
-    Firing {
-        trail: Vec<Vec2>,
-    },
+    Firing { trail: Vec<Vec2> },
     /// Damage is being applied, terrain deformed.
     Resolving {
         impact: Vec2,
@@ -21,9 +19,7 @@ pub enum GamePhase {
     /// Brief pause before next player's turn.
     TurnTransition,
     /// Game is over.
-    GameOver {
-        winner_id: PlayerId,
-    },
+    GameOver { winner_id: PlayerId },
 }
 
 /// Full game state — everything needed to represent a game in progress.

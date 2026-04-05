@@ -1,17 +1,17 @@
 use std::time::Instant;
 
 use ::glam::Vec2;
-use macroquad::prelude::*;
 use ::rand::rngs::StdRng;
 use ::rand::{Rng, SeedableRng};
+use macroquad::prelude::*;
 
-use crate::ai::{calculate_ai_shot, AiDifficulty};
+use crate::ai::{AiDifficulty, calculate_ai_shot};
 use crate::game::constants::*;
 use crate::game::damage::*;
 use crate::game::state::*;
 use crate::game::types::*;
 use crate::physics::projectile::*;
-use crate::terrain::{generate_terrain, Heightmap};
+use crate::terrain::{Heightmap, generate_terrain};
 
 use super::draw;
 
@@ -230,11 +230,15 @@ impl App {
             // Wrap horizontally
             if p.x > WORLD_WIDTH + 50.0 {
                 p.x = -50.0;
-                p.y = self.rng.gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98);
+                p.y = self
+                    .rng
+                    .gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98);
                 p.alpha = self.rng.gen_range(0.05..0.2);
             } else if p.x < -50.0 {
                 p.x = WORLD_WIDTH + 50.0;
-                p.y = self.rng.gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98);
+                p.y = self
+                    .rng
+                    .gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98);
                 p.alpha = self.rng.gen_range(0.05..0.2);
             }
         }
@@ -291,7 +295,8 @@ impl App {
             .unwrap_or(Vec2::ZERO);
 
         let ammo = self.game.shot_params.ammo;
-        self.terrain.apply_crater(impact_pos.x, ammo.crater_radius());
+        self.terrain
+            .apply_crater(impact_pos.x, ammo.crater_radius());
 
         let damages: Vec<DamageResult> = self
             .game

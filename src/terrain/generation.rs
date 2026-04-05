@@ -61,8 +61,8 @@ fn smooth(heights: &mut [f32], passes: usize) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     #[test]
     fn terrain_has_correct_width() {
@@ -96,6 +96,9 @@ mod tests {
         let terrain = generate_terrain(800, &mut rng);
         let min = terrain.heights().iter().cloned().reduce(f32::min).unwrap();
         let max = terrain.heights().iter().cloned().reduce(f32::max).unwrap();
-        assert!(max - min > 50.0, "Terrain should have meaningful height variation");
+        assert!(
+            max - min > 50.0,
+            "Terrain should have meaningful height variation"
+        );
     }
 }

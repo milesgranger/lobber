@@ -133,7 +133,10 @@ mod tests {
 
         let next = step_projectile(&proj, &wind);
         assert!(next.position.y < proj.position.y, "Projectile should fall");
-        assert!(next.position.x > proj.position.x, "Projectile should move right");
+        assert!(
+            next.position.x > proj.position.x,
+            "Projectile should move right"
+        );
     }
 
     #[test]
@@ -187,7 +190,8 @@ mod tests {
         let velocity = Vec2::new(50.0, 50.0);
         let wind = Wind { speed: 0.0 };
 
-        let (trail, outcome) = simulate_shot(start, velocity, AmmoType::Cannonball, &wind, &terrain);
+        let (trail, outcome) =
+            simulate_shot(start, velocity, AmmoType::Cannonball, &wind, &terrain);
 
         assert!(!trail.is_empty());
         match outcome {

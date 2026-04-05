@@ -90,8 +90,8 @@ pub fn calculate_ai_shot(
 mod tests {
     use super::*;
     use glam::Vec2;
-    use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     #[test]
     fn ai_produces_valid_params() {
@@ -102,8 +102,14 @@ mod tests {
         let wind = Wind { speed: 2.0 };
 
         for _ in 0..100 {
-            let params =
-                calculate_ai_shot(&shooter, &target, &wind, &terrain, AiDifficulty::Medium, &mut rng);
+            let params = calculate_ai_shot(
+                &shooter,
+                &target,
+                &wind,
+                &terrain,
+                AiDifficulty::Medium,
+                &mut rng,
+            );
             assert!(params.angle >= 5.0 && params.angle <= 85.0);
             assert!(params.power >= 10.0 && params.power <= 100.0);
         }

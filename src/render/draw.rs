@@ -82,7 +82,13 @@ fn draw_sky(sm: &ScreenMap) {
     for i in 0..steps {
         let t = i as f32 / steps as f32;
         let color = lerp_color(SKY_TOP, SKY_BOTTOM, t);
-        draw_rectangle(0.0, i as f32 * strip_h, screen_width(), strip_h + 1.0, color);
+        draw_rectangle(
+            0.0,
+            i as f32 * strip_h,
+            screen_width(),
+            strip_h + 1.0,
+            color,
+        );
     }
 }
 
@@ -144,7 +150,14 @@ fn draw_terrain(terrain: &Heightmap, sm: &ScreenMap) {
     while wx < WORLD_WIDTH - step {
         let h1 = terrain.height_at(wx);
         let h2 = terrain.height_at(wx + step);
-        draw_line(sm.x(wx), sm.y(h1), sm.x(wx + step), sm.y(h2), 2.0, TERRAIN_GRASS);
+        draw_line(
+            sm.x(wx),
+            sm.y(h1),
+            sm.x(wx + step),
+            sm.y(h2),
+            2.0,
+            TERRAIN_GRASS,
+        );
         wx += step;
     }
 }
@@ -167,7 +180,7 @@ fn draw_tanks(game: &GameState, sm: &ScreenMap) {
         let cy = sm.y(tank.position.y);
 
         let tw = sm.scale_x(14.0); // tank width in screen pixels
-        let th = sm.scale_y(6.0);  // body height
+        let th = sm.scale_y(6.0); // body height
         let turret_r = sm.scale_x(4.0);
 
         // Treads
@@ -177,7 +190,14 @@ fn draw_tanks(game: &GameState, sm: &ScreenMap) {
         let tread_count = 5;
         for i in 0..tread_count {
             let tx = cx - tw / 2.0 + (i as f32 + 0.5) * tw / tread_count as f32;
-            draw_line(tx, cy, tx, cy - tread_h, 1.0, Color::new(0.0, 0.0, 0.0, 0.3));
+            draw_line(
+                tx,
+                cy,
+                tx,
+                cy - tread_h,
+                1.0,
+                Color::new(0.0, 0.0, 0.0, 0.3),
+            );
         }
 
         // Hull
@@ -196,11 +216,12 @@ fn draw_tanks(game: &GameState, sm: &ScreenMap) {
         };
 
         // During aiming for current player, show barrel at aim angle
-        let barrel_angle = if tank.id == game.current_player && matches!(game.phase, GamePhase::Aiming) {
-            game.shot_params.angle
-        } else {
-            tank.last_shot_params.angle
-        };
+        let barrel_angle =
+            if tank.id == game.current_player && matches!(game.phase, GamePhase::Aiming) {
+                game.shot_params.angle
+            } else {
+                tank.last_shot_params.angle
+            };
 
         let angle_rad = barrel_angle.to_radians();
         let dir: f32 = if faces_left { -1.0 } else { 1.0 };
@@ -220,7 +241,13 @@ fn draw_tanks(game: &GameState, sm: &ScreenMap) {
         let dims = measure_text(&label, None, font_size as u16, 1.0);
         let label_x = cx - dims.width / 2.0;
         let label_y = turret_cy - turret_r - 10.0;
-        draw_text(&label, label_x, label_y, font_size, Color::new(body.r, body.g, body.b, 0.7));
+        draw_text(
+            &label,
+            label_x,
+            label_y,
+            font_size,
+            Color::new(body.r, body.g, body.b, 0.7),
+        );
     }
 }
 
@@ -247,10 +274,18 @@ fn draw_landing_zone(game: &GameState, _terrain: &Heightmap, sm: &ScreenMap) {
     let max_power = (params.power * (1.0 + ACCURACY_POWER_DEVIATION)).min(100.0);
 
     let v_center = params.to_velocity(MAX_VELOCITY, facing_left);
-    let v_lo = crate::game::types::ShotParams { angle: min_angle, power: min_power, ammo }
-        .to_velocity(MAX_VELOCITY, facing_left);
-    let v_hi = crate::game::types::ShotParams { angle: max_angle, power: max_power, ammo }
-        .to_velocity(MAX_VELOCITY, facing_left);
+    let v_lo = crate::game::types::ShotParams {
+        angle: min_angle,
+        power: min_power,
+        ammo,
+    }
+    .to_velocity(MAX_VELOCITY, facing_left);
+    let v_hi = crate::game::types::ShotParams {
+        angle: max_angle,
+        power: max_power,
+        ammo,
+    }
+    .to_velocity(MAX_VELOCITY, facing_left);
 
     // Only show ~30% of the full trajectory
     let preview_steps = (TRAJECTORY_PREVIEW_STEPS as f32 * 1.1) as usize;
@@ -309,8 +344,22 @@ fn draw_landing_zone(game: &GameState, _terrain: &Heightmap, sm: &ScreenMap) {
         let hi1 = path_hi[i];
         let hi2 = path_hi[i + 1];
 
-        draw_line(sm.x(lo1.x), sm.y(lo1.y), sm.x(lo2.x), sm.y(lo2.y), 1.0, edge);
-        draw_line(sm.x(hi1.x), sm.y(hi1.y), sm.x(hi2.x), sm.y(hi2.y), 1.0, edge);
+        draw_line(
+            sm.x(lo1.x),
+            sm.y(lo1.y),
+            sm.x(lo2.x),
+            sm.y(lo2.y),
+            1.0,
+            edge,
+        );
+        draw_line(
+            sm.x(hi1.x),
+            sm.y(hi1.y),
+            sm.x(hi2.x),
+            sm.y(hi2.y),
+            1.0,
+            edge,
+        );
     }
 
     // Center line — very faint dashed
@@ -353,11 +402,7 @@ fn draw_projectile(animation: &Option<super::app::TrajectoryAnimation>, sm: &Scr
 
 // ── Impact flash ────────────────────────────────────────────────────────
 
-fn draw_impact_flash(
-    flash: &Option<(Vec2, std::time::Instant)>,
-    game: &GameState,
-    sm: &ScreenMap,
-) {
+fn draw_impact_flash(flash: &Option<(Vec2, std::time::Instant)>, game: &GameState, sm: &ScreenMap) {
     let Some((pos, time)) = flash else { return };
     let elapsed = time.elapsed();
     if elapsed > Duration::from_millis(600) {
@@ -416,7 +461,14 @@ fn draw_health_bars(game: &GameState, sw: f32) {
         let panel_w = bar_w + 16.0;
         let panel_x = x - 8.0;
         draw_rectangle(panel_x, pad - 4.0, panel_w, 42.0, color_u8!(0, 0, 0, 140));
-        draw_rectangle_lines(panel_x, pad - 4.0, panel_w, 42.0, 1.0, Color::new(color.r, color.g, color.b, 0.3));
+        draw_rectangle_lines(
+            panel_x,
+            pad - 4.0,
+            panel_w,
+            42.0,
+            1.0,
+            Color::new(color.r, color.g, color.b, 0.3),
+        );
 
         // Name
         let marker = if is_current { "\u{25b6} " } else { "" };
@@ -426,7 +478,13 @@ fn draw_health_bars(game: &GameState, sw: f32) {
         // Health bar
         let bar_y = pad + 20.0;
         let pct = tank.health / tank.max_health;
-        let hc = if pct > 0.5 { GREEN } else if pct > 0.25 { YELLOW } else { RED };
+        let hc = if pct > 0.5 {
+            GREEN
+        } else if pct > 0.25 {
+            YELLOW
+        } else {
+            RED
+        };
         draw_rectangle(x, bar_y, bar_w, bar_h, color_u8!(30, 30, 30, 200));
         draw_rectangle(x, bar_y, bar_w * pct, bar_h, hc);
         draw_rectangle_lines(x, bar_y, bar_w, bar_h, 1.0, color_u8!(80, 80, 80, 150));
@@ -451,8 +509,21 @@ fn draw_top_center_info(game: &GameState, cx: f32) {
 
     // Background pill
     let info_w = 200.0;
-    draw_rectangle(cx - info_w / 2.0, pad - 4.0, info_w, 32.0, color_u8!(0, 0, 0, 120));
-    draw_rectangle_lines(cx - info_w / 2.0, pad - 4.0, info_w, 32.0, 1.0, color_u8!(60, 60, 80, 100));
+    draw_rectangle(
+        cx - info_w / 2.0,
+        pad - 4.0,
+        info_w,
+        32.0,
+        color_u8!(0, 0, 0, 120),
+    );
+    draw_rectangle_lines(
+        cx - info_w / 2.0,
+        pad - 4.0,
+        info_w,
+        32.0,
+        1.0,
+        color_u8!(60, 60, 80, 100),
+    );
 
     // Wind
     let wind_text = format!("Wind: {:.1} {}", game.wind.speed, game.wind.display_arrow());
@@ -462,12 +533,24 @@ fn draw_top_center_info(game: &GameState, cx: f32) {
     } else {
         LIGHTGRAY
     };
-    draw_text(&wind_text, cx - wind_dims.width / 2.0, pad + 12.0, small, wind_color);
+    draw_text(
+        &wind_text,
+        cx - wind_dims.width / 2.0,
+        pad + 12.0,
+        small,
+        wind_color,
+    );
 
     // Turn
     let turn_text = format!("Turn {}", game.turn_number);
     let turn_dims = measure_text(&turn_text, None, 12, 1.0);
-    draw_text(&turn_text, cx - turn_dims.width / 2.0, pad + 24.0, 12.0, GRAY);
+    draw_text(
+        &turn_text,
+        cx - turn_dims.width / 2.0,
+        pad + 24.0,
+        12.0,
+        GRAY,
+    );
 }
 
 /// Large centered status messages (Hit!/Miss!/Game Over).
@@ -479,22 +562,50 @@ fn draw_status_message(game: &GameState, cx: f32, sh: f32) {
             // Subtle "firing" text — not too distracting
             let text = "Firing...";
             let dims = measure_text(text, None, 20, 1.0);
-            draw_text(text, cx - dims.width / 2.0, 60.0, 20.0, Color::new(1.0, 1.0, 1.0, 0.4));
+            draw_text(
+                text,
+                cx - dims.width / 2.0,
+                60.0,
+                20.0,
+                Color::new(1.0, 1.0, 1.0, 0.4),
+            );
         }
         GamePhase::Resolving { damages, .. } => {
             if damages.is_empty() {
                 let text = "MISS";
                 let dims = measure_text(text, None, 48, 1.0);
                 // Background
-                draw_rectangle(cx - dims.width / 2.0 - 16.0, center_y - 40.0, dims.width + 32.0, 56.0, color_u8!(0, 0, 0, 150));
-                draw_text(text, cx - dims.width / 2.0, center_y, 48.0, color_u8!(180, 180, 180, 255));
+                draw_rectangle(
+                    cx - dims.width / 2.0 - 16.0,
+                    center_y - 40.0,
+                    dims.width + 32.0,
+                    56.0,
+                    color_u8!(0, 0, 0, 150),
+                );
+                draw_text(
+                    text,
+                    cx - dims.width / 2.0,
+                    center_y,
+                    48.0,
+                    color_u8!(180, 180, 180, 255),
+                );
             } else {
                 for (i, d) in damages.iter().enumerate() {
                     let crit = if d.is_critical { "  CRITICAL!" } else { "" };
-                    let direct = if d.is_direct_hit { "DIRECT HIT!" } else { "HIT!" };
+                    let direct = if d.is_direct_hit {
+                        "DIRECT HIT!"
+                    } else {
+                        "HIT!"
+                    };
                     let text = format!("{} {:.0} dmg{}", direct, d.damage, crit);
 
-                    let size = if d.is_critical { 44.0 } else if d.is_direct_hit { 40.0 } else { 36.0 };
+                    let size = if d.is_critical {
+                        44.0
+                    } else if d.is_direct_hit {
+                        40.0
+                    } else {
+                        36.0
+                    };
                     let color = if d.is_critical {
                         GOLD
                     } else if d.is_direct_hit {
@@ -505,24 +616,46 @@ fn draw_status_message(game: &GameState, cx: f32, sh: f32) {
 
                     let y = center_y + i as f32 * 50.0;
                     let dims = measure_text(&text, None, size as u16, 1.0);
-                    draw_rectangle(cx - dims.width / 2.0 - 12.0, y - dims.height - 8.0, dims.width + 24.0, dims.height + 16.0, color_u8!(0, 0, 0, 160));
+                    draw_rectangle(
+                        cx - dims.width / 2.0 - 12.0,
+                        y - dims.height - 8.0,
+                        dims.width + 24.0,
+                        dims.height + 16.0,
+                        color_u8!(0, 0, 0, 160),
+                    );
                     draw_text(&text, cx - dims.width / 2.0, y, size, color);
                 }
             }
         }
         GamePhase::GameOver { winner_id } => {
             let winner = &game.tanks[*winner_id];
-            let color = if winner.id == 0 { PLAYER_BODY } else { CPU_BODY };
+            let color = if winner.id == 0 {
+                PLAYER_BODY
+            } else {
+                CPU_BODY
+            };
 
             let text = format!("{} WINS!", winner.name.to_uppercase());
             let dims = measure_text(&text, None, 56, 1.0);
-            draw_rectangle(cx - dims.width / 2.0 - 20.0, center_y - 50.0, dims.width + 40.0, 80.0, color_u8!(0, 0, 0, 180));
+            draw_rectangle(
+                cx - dims.width / 2.0 - 20.0,
+                center_y - 50.0,
+                dims.width + 40.0,
+                80.0,
+                color_u8!(0, 0, 0, 180),
+            );
             draw_text(&text, cx - dims.width / 2.0, center_y, 56.0, color);
 
             let sub = "Press Space to exit";
             let sub_dims = measure_text(sub, None, 20, 1.0);
             let blink = (get_time() * 2.0).sin() * 0.5 + 0.5;
-            draw_text(sub, cx - sub_dims.width / 2.0, center_y + 30.0, 20.0, Color::new(1.0, 1.0, 1.0, blink as f32));
+            draw_text(
+                sub,
+                cx - sub_dims.width / 2.0,
+                center_y + 30.0,
+                20.0,
+                Color::new(1.0, 1.0, 1.0, blink as f32),
+            );
         }
         _ => {}
     }
@@ -536,7 +669,13 @@ fn draw_aiming_overlay(game: &GameState, cx: f32, sh: f32) {
     // Semi-transparent panel at bottom
     let panel_h = 52.0;
     let panel_y = sh - panel_h;
-    draw_rectangle(0.0, panel_y, screen_width(), panel_h, color_u8!(0, 0, 0, 120));
+    draw_rectangle(
+        0.0,
+        panel_y,
+        screen_width(),
+        panel_h,
+        color_u8!(0, 0, 0, 120),
+    );
 
     // Shot parameters — centered
     let ammo_name = game.shot_params.ammo.display_name();
@@ -547,14 +686,28 @@ fn draw_aiming_overlay(game: &GameState, cx: f32, sh: f32) {
 
     // Lay out params with spacing
     let params = [
-        (format!("Angle: {:.0}\u{00b0}", game.shot_params.angle), WHITE),
+        (
+            format!("Angle: {:.0}\u{00b0}", game.shot_params.angle),
+            WHITE,
+        ),
         (format!("Power: {:.0}%", game.shot_params.power), WHITE),
         (format!("Ammo: {}", ammo_name), ammo_color),
-        (format!("Move: {:.0}", game.move_budget), if game.move_budget > 0.0 { WHITE } else { DARKGRAY }),
+        (
+            format!("Move: {:.0}", game.move_budget),
+            if game.move_budget > 0.0 {
+                WHITE
+            } else {
+                DARKGRAY
+            },
+        ),
     ];
 
     let spacing = 24.0;
-    let total_w: f32 = params.iter().map(|(t, _)| measure_text(t, None, fs as u16, 1.0).width + spacing).sum::<f32>() - spacing;
+    let total_w: f32 = params
+        .iter()
+        .map(|(t, _)| measure_text(t, None, fs as u16, 1.0).width + spacing)
+        .sum::<f32>()
+        - spacing;
     let mut px = cx - total_w / 2.0;
     let py = panel_y + 18.0;
 
@@ -566,7 +719,13 @@ fn draw_aiming_overlay(game: &GameState, cx: f32, sh: f32) {
     // Controls hint — dim, below params
     let hint = "h/\u{2190} l/\u{2192}:Angle   k/\u{2191} j/\u{2193}:Power   a/d:Move   Tab:Ammo   Space:Fire   Esc:Quit";
     let hint_dims = measure_text(hint, None, small as u16, 1.0);
-    draw_text(hint, cx - hint_dims.width / 2.0, panel_y + 38.0, small, color_u8!(100, 100, 100, 180));
+    draw_text(
+        hint,
+        cx - hint_dims.width / 2.0,
+        panel_y + 38.0,
+        small,
+        color_u8!(100, 100, 100, 180),
+    );
 }
 
 // ── Title screen ────────────────────────────────────────────────────────
@@ -590,7 +749,13 @@ pub fn draw_title() {
 
     let author = "by Miles Granger";
     let auth_dims = measure_text(author, None, 18, 1.0);
-    draw_text(author, cx - auth_dims.width / 2.0, sh * 0.37, 18.0, LIGHTGRAY);
+    draw_text(
+        author,
+        cx - auth_dims.width / 2.0,
+        sh * 0.37,
+        18.0,
+        LIGHTGRAY,
+    );
 
     let inspired = "Inspired by Scorched Earth (1991)";
     let ins_dims = measure_text(inspired, None, 16, 1.0);
@@ -621,7 +786,13 @@ pub fn draw_title() {
     let prompt_dims = measure_text(prompt, None, 22, 1.0);
     let blink = (get_time() * 2.0).sin() * 0.5 + 0.5;
     let prompt_color = Color::new(1.0, 1.0, 1.0, blink as f32);
-    draw_text(prompt, cx - prompt_dims.width / 2.0, sh * 0.82, 22.0, prompt_color);
+    draw_text(
+        prompt,
+        cx - prompt_dims.width / 2.0,
+        sh * 0.82,
+        22.0,
+        prompt_color,
+    );
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────

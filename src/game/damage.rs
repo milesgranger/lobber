@@ -68,8 +68,8 @@ pub fn calculate_damage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::StdRng;
     use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     fn test_rng() -> StdRng {
         StdRng::seed_from_u64(42)
