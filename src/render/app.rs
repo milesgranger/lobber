@@ -53,6 +53,14 @@ impl TrajectoryAnimation {
     }
 }
 
+/// A single wind particle (cloud wisp) in the sky.
+pub struct WindParticle {
+    pub x: f32,     // world x
+    pub y: f32,     // world y (upper portion of sky)
+    pub size: f32,  // radius
+    pub alpha: f32, // opacity
+}
+
 /// Top-level application state.
 pub struct App {
     pub game: GameState,
@@ -64,6 +72,7 @@ pub struct App {
     pub resolve_timer: Option<Instant>,
     pub ai_difficulty: AiDifficulty,
     pub impact_flash: Option<(Vec2, Instant)>,
+    pub wind_particles: Vec<WindParticle>,
 }
 
 impl App {
@@ -99,6 +108,8 @@ impl App {
             move_budget: TANK_MOVE_BUDGET,
         };
 
+        let wind_particles = Self::spawn_initial_particles(&mut rng);
+
         Self {
             game,
             terrain,
@@ -109,7 +120,19 @@ impl App {
             resolve_timer: None,
             ai_difficulty: AiDifficulty::Medium,
             impact_flash: None,
+            wind_particles,
         }
+    }
+
+    fn spawn_initial_particles(rng: &mut StdRng) -> Vec<WindParticle> {
+        (0..30)
+            .map(|_| WindParticle {
+                x: rng.gen_range(0.0..WORLD_WIDTH),
+                y: rng.gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98),
+                size: rng.gen_range(6.0..25.0),
+                alpha: rng.gen_range(0.05..0.2),
+            })
+            .collect()
     }
 
     pub fn handle_input(&mut self) {
@@ -165,6 +188,8 @@ impl App {
     }
 
     pub fn update(&mut self) {
+        self.update_wind_particles();
+
         match &self.game.phase {
             GamePhase::Aiming => {
                 if self.game.current_tank().is_ai {
@@ -187,6 +212,30 @@ impl App {
             }
             GamePhase::TurnTransition => {}
             GamePhase::GameOver { .. } => {}
+        }
+    }
+
+    fn update_wind_particles(&mut self) {
+        let dt = get_frame_time();
+        let wind_speed = self.game.wind.speed;
+        // Particles drift at wind speed, scaled up for visual effect
+        let drift = wind_speed * 8.0 * dt;
+
+        for p in &mut self.wind_particles {
+            p.x += drift;
+            // Add slight vertical wobble
+            p.y += (get_time() as f32 * 0.3 + p.x * 0.01).sin() * 2.0 * dt;
+
+            // Wrap horizontally
+            if p.x > WORLD_WIDTH + 50.0 {
+                p.x = -50.0;
+                p.y = self.rng.gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98);
+                p.alpha = self.rng.gen_range(0.05..0.2);
+            } else if p.x < -50.0 {
+                p.x = WORLD_WIDTH + 50.0;
+                p.y = self.rng.gen_range(WORLD_CEILING * 0.55..WORLD_CEILING * 0.98);
+                p.alpha = self.rng.gen_range(0.05..0.2);
+            }
         }
     }
 
