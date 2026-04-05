@@ -529,9 +529,13 @@ pub fn draw_title() {
     let sub_dims = measure_text(sub, None, 24, 1.0);
     draw_text(sub, cx - sub_dims.width / 2.0, sh * 0.32, 24.0, LIGHTGRAY);
 
+    let author = "by Miles Granger";
+    let auth_dims = measure_text(author, None, 18, 1.0);
+    draw_text(author, cx - auth_dims.width / 2.0, sh * 0.37, 18.0, LIGHTGRAY);
+
     let inspired = "Inspired by Scorched Earth (1991)";
     let ins_dims = measure_text(inspired, None, 16, 1.0);
-    draw_text(inspired, cx - ins_dims.width / 2.0, sh * 0.37, 16.0, GRAY);
+    draw_text(inspired, cx - ins_dims.width / 2.0, sh * 0.42, 16.0, GRAY);
 
     // Controls
     let controls = [
