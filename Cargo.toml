@@ -1,12 +1,11 @@
 [package]
 name = "lobber"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
-description = "A TUI artillery game inspired by Scorched Earth"
+description = "An artillery game inspired by Scorched Earth"
 
 [dependencies]
-ratatui = "0.30"
-crossterm = "0.29"
+macroquad = "0.4"
 glam = { version = "0.29", features = ["serde"] }
 rand = "0.8"
 serde = { version = "1", features = ["derive"] }
