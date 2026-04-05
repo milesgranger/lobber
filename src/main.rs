@@ -86,29 +86,23 @@ fn show_title_screen(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> i
         terminal.draw(|frame| {
             let area = frame.area();
 
-            let text = format!(
-                "{}\n\
-                 \n\
-                 A TUI Artillery Game\n\
-                 \n\
-                 Inspired by Scorched Earth (1991)\n\
-                 \n\
-                 Controls:\n\
-                   h/Left  l/Right  -  Adjust angle\n\
-                   k/Up    j/Down   -  Adjust power\n\
-                   a/d              -  Move tank\n\
-                   Tab              -  Switch ammo\n\
-                   Space / Enter    -  Fire!\n\
-                   Q                -  Quit\n\
-                 \n\
-                 Press any key to start...",
-                TITLE_ART,
-            );
+            let text = vec![
+                Line::from(TITLE_ART.trim_end()).centered(),
+                Line::from("").centered(),
+                Line::from("A TUI Artillery Game").centered(),
+                Line::from("Inspired by Scorched Earth (1991)").centered(),
+                Line::from("").centered(),
+                Line::from("  Controls:").left_aligned(),
+                Line::from("    h/Left l/Right .. Angle       a/d ......... Move").left_aligned(),
+                Line::from("    k/Up   j/Down  .. Power       Tab ......... Ammo").left_aligned(),
+                Line::from("    Space/Enter ...... Fire!       Q ........... Quit").left_aligned(),
+                Line::from("").centered(),
+                Line::from("Press any key to start...").centered(),
+            ];
 
             let paragraph = Paragraph::new(text)
                 .block(Block::default().borders(Borders::ALL))
-                .style(Style::default().fg(Color::Yellow))
-                .alignment(Alignment::Center);
+                .style(Style::default().fg(Color::Yellow));
 
             frame.render_widget(paragraph, area);
         })?;

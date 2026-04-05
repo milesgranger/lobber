@@ -270,7 +270,7 @@ impl App {
     pub fn render(&self, frame: &mut Frame) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Min(10), Constraint::Length(4)])
+            .constraints([Constraint::Min(10), Constraint::Length(5)])
             .split(frame.area());
 
         battlefield::render_battlefield(
