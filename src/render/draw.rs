@@ -20,28 +20,23 @@ const PLAYER_BODY: Color = color_u8!(0, 190, 220, 255);
 const PLAYER_DARK: Color = color_u8!(0, 120, 150, 255);
 const CPU_BODY: Color = color_u8!(220, 55, 55, 255);
 const CPU_DARK: Color = color_u8!(155, 30, 30, 255);
-const HUD_BG: Color = color_u8!(0, 0, 0, 180);
 
 // ── Coordinate mapping ──────────────────────────────────────────────────
 
 struct ScreenMap {
     sx: f32, // screen pixels per world unit (x)
     sy: f32, // screen pixels per world unit (y)
-    sh: f32, // screen height (for y flip)
-    hud_h: f32,
+    sh: f32, // full screen height
 }
 
 impl ScreenMap {
     fn new() -> Self {
         let sw = screen_width();
         let sh = screen_height();
-        let hud_h = 60.0;
-        let play_h = sh - hud_h;
         Self {
             sx: sw / WORLD_WIDTH,
-            sy: play_h / WORLD_CEILING,
-            sh: play_h,
-            hud_h,
+            sy: sh / WORLD_CEILING,
+            sh,
         }
     }
 
@@ -214,45 +209,18 @@ fn draw_tanks(game: &GameState, sm: &ScreenMap) {
         let by_end = turret_cy - angle_rad.sin() * barrel_len;
         draw_line(cx, turret_cy, bx_end, by_end, 3.0, body);
 
-        // Name label
+        // Small name tag above tank
         let is_current = tank.id == game.current_player;
         let label = if is_current {
             format!("\u{25bc} {}", tank.name)
         } else {
             tank.name.clone()
         };
-        let font_size = 18.0;
+        let font_size = 14.0;
         let dims = measure_text(&label, None, font_size as u16, 1.0);
         let label_x = cx - dims.width / 2.0;
-        let label_y = turret_cy - turret_r - 24.0;
-
-        // Label background
-        draw_rectangle(
-            label_x - 4.0,
-            label_y - dims.height - 2.0,
-            dims.width + 8.0,
-            dims.height + 6.0,
-            HUD_BG,
-        );
-        draw_text(&label, label_x, label_y, font_size, body);
-
-        // Health bar
-        let bar_w = 50.0;
-        let bar_h = 5.0;
-        let bar_x = cx - bar_w / 2.0;
-        let bar_y = label_y + 4.0;
-        let pct = tank.health / tank.max_health;
-        let health_color = if pct > 0.5 {
-            GREEN
-        } else if pct > 0.25 {
-            YELLOW
-        } else {
-            RED
-        };
-
-        draw_rectangle(bar_x, bar_y, bar_w, bar_h, color_u8!(40, 40, 40, 200));
-        draw_rectangle(bar_x, bar_y, bar_w * pct, bar_h, health_color);
-        draw_rectangle_lines(bar_x, bar_y, bar_w, bar_h, 1.0, color_u8!(120, 120, 120, 200));
+        let label_y = turret_cy - turret_r - 10.0;
+        draw_text(&label, label_x, label_y, font_size, Color::new(body.r, body.g, body.b, 0.7));
     }
 }
 
@@ -412,102 +380,193 @@ fn draw_impact_flash(
     draw_circle(cx, cy, radius * 0.15, Color::new(1.0, 1.0, 0.9, alpha));
 }
 
-// ── HUD ─────────────────────────────────────────────────────────────────
+// ── HUD (overlay-based) ─────────────────────────────────────────────────
 
-fn draw_hud(game: &GameState, sm: &ScreenMap) {
+fn draw_hud(game: &GameState, _sm: &ScreenMap) {
     let sw = screen_width();
-    let hud_y = sm.sh;
+    let sh = screen_height();
+    let cx = sw / 2.0;
 
-    // HUD background
-    draw_rectangle(0.0, hud_y, sw, sm.hud_h, color_u8!(15, 15, 25, 240));
-    draw_line(0.0, hud_y, sw, hud_y, 2.0, color_u8!(60, 60, 80, 255));
+    draw_health_bars(game, sw);
+    draw_top_center_info(game, cx);
+    draw_status_message(game, cx, sh);
 
-    let fs = 18.0;
-    let small = 14.0;
-    let y1 = hud_y + 20.0;
-    let y2 = hud_y + 42.0;
+    // Bottom overlay: shot params + controls hint (aiming only)
+    if matches!(game.phase, GamePhase::Aiming) && !game.current_tank().is_ai {
+        draw_aiming_overlay(game, cx, sh);
+    }
+}
 
-    // Player health bars
+/// Health bars in top corners.
+fn draw_health_bars(game: &GameState, sw: f32) {
+    let pad = 16.0;
+    let bar_w = 140.0;
+    let bar_h = 10.0;
+    let fs = 16.0;
+    let small = 13.0;
+
     for tank in &game.tanks {
-        let (color, x_pos) = if tank.id == 0 {
-            (PLAYER_BODY, 20.0)
-        } else {
-            (CPU_BODY, sw - 220.0)
-        };
-
+        let is_left = tank.id == 0;
+        let color = if tank.id == 0 { PLAYER_BODY } else { CPU_BODY };
         let is_current = tank.id == game.current_player;
-        let marker = if is_current { "\u{25b6} " } else { "  " };
-        let label = format!("{}{}", marker, tank.name);
-        draw_text(&label, x_pos, y1, fs, color);
 
-        let bar_x = x_pos;
-        let bar_y = y1 + 6.0;
-        let bar_w = 120.0;
-        let bar_h = 8.0;
+        let x = if is_left { pad } else { sw - pad - bar_w };
+
+        // Background panel
+        let panel_w = bar_w + 16.0;
+        let panel_x = if is_left { x - 8.0 } else { x - 8.0 };
+        draw_rectangle(panel_x, pad - 4.0, panel_w, 42.0, color_u8!(0, 0, 0, 140));
+        draw_rectangle_lines(panel_x, pad - 4.0, panel_w, 42.0, 1.0, Color::new(color.r, color.g, color.b, 0.3));
+
+        // Name
+        let marker = if is_current { "\u{25b6} " } else { "" };
+        let label = format!("{}{}", marker, tank.name);
+        draw_text(&label, x, pad + 12.0, fs, color);
+
+        // Health bar
+        let bar_y = pad + 20.0;
         let pct = tank.health / tank.max_health;
         let hc = if pct > 0.5 { GREEN } else if pct > 0.25 { YELLOW } else { RED };
-        draw_rectangle(bar_x, bar_y, bar_w, bar_h, color_u8!(40, 40, 40, 255));
-        draw_rectangle(bar_x, bar_y, bar_w * pct, bar_h, hc);
+        draw_rectangle(x, bar_y, bar_w, bar_h, color_u8!(30, 30, 30, 200));
+        draw_rectangle(x, bar_y, bar_w * pct, bar_h, hc);
+        draw_rectangle_lines(x, bar_y, bar_w, bar_h, 1.0, color_u8!(80, 80, 80, 150));
+
+        // HP text
+        let hp_text = format!("{:.0}/{:.0}", tank.health, tank.max_health);
+        let hp_dims = measure_text(&hp_text, None, small as u16, 1.0);
         draw_text(
-            &format!("{:.0} HP", tank.health),
-            bar_x + bar_w + 8.0,
-            bar_y + bar_h,
+            &hp_text,
+            x + bar_w / 2.0 - hp_dims.width / 2.0,
+            bar_y + bar_h - 1.0,
             small,
-            LIGHTGRAY,
+            WHITE,
         );
     }
+}
 
-    // Center: shot info
-    let center_x = sw / 2.0;
+/// Wind + turn indicator at top center.
+fn draw_top_center_info(game: &GameState, cx: f32) {
+    let pad = 16.0;
+    let small = 14.0;
 
-    let status = match &game.phase {
-        GamePhase::Aiming if game.current_tank().is_ai => "AI thinking...".to_string(),
-        GamePhase::Aiming => {
-            let ammo_name = game.shot_params.ammo.display_name();
-            format!(
-                "Angle: {:.0}\u{00b0}   Power: {:.0}%   Ammo: {}   Wind: {:.1} {}   Move: {:.0}",
-                game.shot_params.angle,
-                game.shot_params.power,
-                ammo_name,
-                game.wind.speed,
-                game.wind.display_arrow(),
-                game.move_budget,
-            )
+    // Background pill
+    let info_w = 200.0;
+    draw_rectangle(cx - info_w / 2.0, pad - 4.0, info_w, 32.0, color_u8!(0, 0, 0, 120));
+    draw_rectangle_lines(cx - info_w / 2.0, pad - 4.0, info_w, 32.0, 1.0, color_u8!(60, 60, 80, 100));
+
+    // Wind
+    let wind_text = format!("Wind: {:.1} {}", game.wind.speed, game.wind.display_arrow());
+    let wind_dims = measure_text(&wind_text, None, small as u16, 1.0);
+    let wind_color = if game.wind.speed.abs() > 3.0 {
+        color_u8!(255, 180, 80, 255) // strong wind = orange
+    } else {
+        LIGHTGRAY
+    };
+    draw_text(&wind_text, cx - wind_dims.width / 2.0, pad + 12.0, small, wind_color);
+
+    // Turn
+    let turn_text = format!("Turn {}", game.turn_number);
+    let turn_dims = measure_text(&turn_text, None, 12, 1.0);
+    draw_text(&turn_text, cx - turn_dims.width / 2.0, pad + 24.0, 12.0, GRAY);
+}
+
+/// Large centered status messages (Hit!/Miss!/Game Over).
+fn draw_status_message(game: &GameState, cx: f32, sh: f32) {
+    let center_y = sh * 0.4;
+
+    match &game.phase {
+        GamePhase::Firing { .. } => {
+            // Subtle "firing" text — not too distracting
+            let text = "Firing...";
+            let dims = measure_text(text, None, 20, 1.0);
+            draw_text(text, cx - dims.width / 2.0, 60.0, 20.0, Color::new(1.0, 1.0, 1.0, 0.4));
         }
-        GamePhase::Firing { .. } => "Firing...".to_string(),
         GamePhase::Resolving { damages, .. } => {
             if damages.is_empty() {
-                "Miss!".to_string()
+                let text = "MISS";
+                let dims = measure_text(text, None, 48, 1.0);
+                // Background
+                draw_rectangle(cx - dims.width / 2.0 - 16.0, center_y - 40.0, dims.width + 32.0, 56.0, color_u8!(0, 0, 0, 150));
+                draw_text(text, cx - dims.width / 2.0, center_y, 48.0, color_u8!(180, 180, 180, 255));
             } else {
-                damages
-                    .iter()
-                    .map(|d| {
-                        let crit = if d.is_critical { " CRIT!" } else { "" };
-                        let direct = if d.is_direct_hit { " Direct!" } else { "" };
-                        format!("{:.0} dmg{}{}", d.damage, direct, crit)
-                    })
-                    .collect::<Vec<_>>()
-                    .join("  |  ")
+                for (i, d) in damages.iter().enumerate() {
+                    let crit = if d.is_critical { "  CRITICAL!" } else { "" };
+                    let direct = if d.is_direct_hit { "DIRECT HIT!" } else { "HIT!" };
+                    let text = format!("{} {:.0} dmg{}", direct, d.damage, crit);
+
+                    let size = if d.is_critical { 44.0 } else if d.is_direct_hit { 40.0 } else { 36.0 };
+                    let color = if d.is_critical {
+                        GOLD
+                    } else if d.is_direct_hit {
+                        color_u8!(255, 100, 100, 255)
+                    } else {
+                        ORANGE
+                    };
+
+                    let y = center_y + i as f32 * 50.0;
+                    let dims = measure_text(&text, None, size as u16, 1.0);
+                    draw_rectangle(cx - dims.width / 2.0 - 12.0, y - dims.height - 8.0, dims.width + 24.0, dims.height + 16.0, color_u8!(0, 0, 0, 160));
+                    draw_text(&text, cx - dims.width / 2.0, y, size, color);
+                }
             }
         }
-        GamePhase::TurnTransition => "Next turn...".to_string(),
         GamePhase::GameOver { winner_id } => {
-            format!("{} wins!  [Space to exit]", game.tanks[*winner_id].name)
+            let winner = &game.tanks[*winner_id];
+            let color = if winner.id == 0 { PLAYER_BODY } else { CPU_BODY };
+
+            let text = format!("{} WINS!", winner.name.to_uppercase());
+            let dims = measure_text(&text, None, 56, 1.0);
+            draw_rectangle(cx - dims.width / 2.0 - 20.0, center_y - 50.0, dims.width + 40.0, 80.0, color_u8!(0, 0, 0, 180));
+            draw_text(&text, cx - dims.width / 2.0, center_y, 56.0, color);
+
+            let sub = "Press Space to exit";
+            let sub_dims = measure_text(sub, None, 20, 1.0);
+            let blink = (get_time() * 2.0).sin() * 0.5 + 0.5;
+            draw_text(sub, cx - sub_dims.width / 2.0, center_y + 30.0, 20.0, Color::new(1.0, 1.0, 1.0, blink as f32));
         }
+        _ => {}
+    }
+}
+
+/// Translucent bottom overlay with shot params and controls (aiming phase only).
+fn draw_aiming_overlay(game: &GameState, cx: f32, sh: f32) {
+    let fs = 17.0;
+    let small = 13.0;
+
+    // Semi-transparent panel at bottom
+    let panel_h = 52.0;
+    let panel_y = sh - panel_h;
+    draw_rectangle(0.0, panel_y, screen_width(), panel_h, color_u8!(0, 0, 0, 120));
+
+    // Shot parameters — centered
+    let ammo_name = game.shot_params.ammo.display_name();
+    let ammo_color = match game.shot_params.ammo {
+        crate::game::types::AmmoType::Cannonball => color_u8!(100, 160, 255, 255),
+        crate::game::types::AmmoType::Explosive => color_u8!(255, 160, 80, 255),
     };
 
-    let dims = measure_text(&status, None, fs as u16, 1.0);
-    draw_text(&status, center_x - dims.width / 2.0, y1, fs, WHITE);
+    // Lay out params with spacing
+    let params = [
+        (format!("Angle: {:.0}\u{00b0}", game.shot_params.angle), WHITE),
+        (format!("Power: {:.0}%", game.shot_params.power), WHITE),
+        (format!("Ammo: {}", ammo_name), ammo_color),
+        (format!("Move: {:.0}", game.move_budget), if game.move_budget > 0.0 { WHITE } else { DARKGRAY }),
+    ];
 
-    // Controls hint
+    let spacing = 24.0;
+    let total_w: f32 = params.iter().map(|(t, _)| measure_text(t, None, fs as u16, 1.0).width + spacing).sum::<f32>() - spacing;
+    let mut px = cx - total_w / 2.0;
+    let py = panel_y + 18.0;
+
+    for (text, color) in &params {
+        draw_text(text, px, py, fs, *color);
+        px += measure_text(text, None, fs as u16, 1.0).width + spacing;
+    }
+
+    // Controls hint — dim, below params
     let hint = "h/\u{2190} l/\u{2192}:Angle   k/\u{2191} j/\u{2193}:Power   a/d:Move   Tab:Ammo   Space:Fire   Esc:Quit";
     let hint_dims = measure_text(hint, None, small as u16, 1.0);
-    draw_text(hint, center_x - hint_dims.width / 2.0, y2, small, DARKGRAY);
-
-    // Turn counter
-    let turn_text = format!("Turn {}", game.turn_number);
-    let turn_dims = measure_text(&turn_text, None, small as u16, 1.0);
-    draw_text(&turn_text, center_x - turn_dims.width / 2.0, y2 + 14.0, small, GRAY);
+    draw_text(hint, cx - hint_dims.width / 2.0, panel_y + 38.0, small, color_u8!(100, 100, 100, 180));
 }
 
 // ── Title screen ────────────────────────────────────────────────────────
