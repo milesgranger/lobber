@@ -24,7 +24,7 @@ impl AmmoType {
     /// Splash damage radius in world units. Cannonball has a tiny tolerance zone instead of true splash.
     pub fn splash_radius(self) -> f32 {
         match self {
-            AmmoType::Cannonball => 2.0,
+            AmmoType::Cannonball => 12.0,
             AmmoType::Explosive => 30.0,
         }
     }

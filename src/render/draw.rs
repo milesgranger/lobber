@@ -256,9 +256,11 @@ fn draw_tanks(game: &GameState, sm: &ScreenMap) {
     }
 }
 
-// ── Landing zone ellipse ────────────────────────────────────────────────
+// ── Trajectory spread cone ──────────────────────────────────────────────
 
-fn draw_landing_zone(game: &GameState, terrain: &Heightmap, sm: &ScreenMap) {
+fn draw_landing_zone(game: &GameState, _terrain: &Heightmap, sm: &ScreenMap) {
+    use crate::physics::projectile::predict_trajectory;
+
     if !matches!(game.phase, GamePhase::Aiming) || game.current_tank().is_ai {
         return;
     }
@@ -267,89 +269,93 @@ fn draw_landing_zone(game: &GameState, terrain: &Heightmap, sm: &ScreenMap) {
     let facing_left = game.current_faces_left();
     let start = Vec2::new(tank.position.x, tank.position.y + 5.0);
 
-    // Simulate 3 shots: nominal, min-deviation, max-deviation to find the landing spread
     let params = game.shot_params;
     let ammo = params.ammo;
 
-    let nominal_v = params.to_velocity(MAX_VELOCITY, facing_left);
+    // Build 3 trajectories: nominal center + two edges of the RNG spread
     let min_angle = (params.angle - ACCURACY_ANGLE_DEVIATION).max(0.0);
     let max_angle = (params.angle + ACCURACY_ANGLE_DEVIATION).min(90.0);
     let min_power = params.power * (1.0 - ACCURACY_POWER_DEVIATION);
     let max_power = (params.power * (1.0 + ACCURACY_POWER_DEVIATION)).min(100.0);
 
-    let shot_min = crate::game::types::ShotParams { angle: min_angle, power: min_power, ammo };
-    let shot_max = crate::game::types::ShotParams { angle: max_angle, power: max_power, ammo };
+    let v_center = params.to_velocity(MAX_VELOCITY, facing_left);
+    let v_lo = crate::game::types::ShotParams { angle: min_angle, power: min_power, ammo }
+        .to_velocity(MAX_VELOCITY, facing_left);
+    let v_hi = crate::game::types::ShotParams { angle: max_angle, power: max_power, ammo }
+        .to_velocity(MAX_VELOCITY, facing_left);
 
-    let v_min = shot_min.to_velocity(MAX_VELOCITY, facing_left);
-    let v_max = shot_max.to_velocity(MAX_VELOCITY, facing_left);
+    // Only show ~30% of the full trajectory
+    let preview_steps = (TRAJECTORY_PREVIEW_STEPS as f32 * 1.1) as usize;
 
-    // Find where each lands
-    let land_nominal = find_landing_x(start, nominal_v, ammo, &game.wind, terrain);
-    let land_min = find_landing_x(start, v_min, ammo, &game.wind, terrain);
-    let land_max = find_landing_x(start, v_max, ammo, &game.wind, terrain);
+    let path_center = predict_trajectory(start, v_center, ammo, &game.wind, preview_steps);
+    let path_lo = predict_trajectory(start, v_lo, ammo, &game.wind, preview_steps);
+    let path_hi = predict_trajectory(start, v_hi, ammo, &game.wind, preview_steps);
 
-    let Some(cx_world) = land_nominal else { return };
-
-    // The spread is the range of possible landing x positions
-    let all_x = [land_min, land_max, land_nominal];
-    let min_x = all_x.iter().filter_map(|v| *v).reduce(f32::min).unwrap_or(cx_world);
-    let max_x = all_x.iter().filter_map(|v| *v).reduce(f32::max).unwrap_or(cx_world);
-
-    // The ellipse width covers the RNG spread + splash radius
-    let spread_w = (max_x - min_x).abs();
-    let splash_r = ammo.splash_radius();
-    let half_w = (spread_w / 2.0 + splash_r).max(splash_r);
-    let half_h = splash_r * 0.6; // vertical extent (flatter ellipse)
-
-    let terrain_h = terrain.height_at(cx_world);
-    let cx_screen = sm.x(cx_world);
-    let cy_screen = sm.y(terrain_h);
-
-    // Pulsing animation
-    let pulse = ((get_time() * 3.0).sin() * 0.15 + 1.0) as f32;
-    let hw = sm.scale_x(half_w) * pulse;
-    let hh = sm.scale_y(half_h) * pulse;
-
-    // Color by ammo type
-    let (fill_color, edge_color) = match ammo {
-        crate::game::types::AmmoType::Cannonball => (
-            Color::new(0.3, 0.5, 1.0, 0.08),  // blue tint, very subtle
-            Color::new(0.4, 0.6, 1.0, 0.25),
-        ),
-        crate::game::types::AmmoType::Explosive => (
-            Color::new(1.0, 0.5, 0.2, 0.08),  // orange tint
-            Color::new(1.0, 0.6, 0.3, 0.25),
-        ),
-    };
-
-    // Draw filled ellipse (concentric rings for gradient)
-    let rings = 12;
-    for i in (0..rings).rev() {
-        let t = i as f32 / rings as f32;
-        let rw = hw * t;
-        let rh = hh * t;
-        let alpha = fill_color.a * (1.0 - t * 0.5);
-        let c = Color::new(fill_color.r, fill_color.g, fill_color.b, alpha);
-        draw_ellipse(cx_screen, cy_screen, rw, rh, 0.0, c);
+    if path_center.is_empty() {
+        return;
     }
 
-    // Draw edge ring
-    draw_ellipse_lines(cx_screen, cy_screen, hw, hh, 0.0, 1.5, edge_color);
+    // Color by ammo type
+    let cone_color = match ammo {
+        crate::game::types::AmmoType::Cannonball => Color::new(0.3, 0.5, 1.0, 1.0),
+        crate::game::types::AmmoType::Explosive => Color::new(1.0, 0.5, 0.2, 1.0),
+    };
 
-    // Small crosshair at center
-    let cross_size = 4.0;
-    let cross_color = Color::new(edge_color.r, edge_color.g, edge_color.b, 0.5);
-    draw_line(cx_screen - cross_size, cy_screen, cx_screen + cross_size, cy_screen, 1.0, cross_color);
-    draw_line(cx_screen, cy_screen - cross_size, cx_screen, cy_screen + cross_size, 1.0, cross_color);
-}
+    let len = path_center.len().min(path_lo.len()).min(path_hi.len());
 
-/// Simulate a shot and return the x-coordinate where it hits terrain (or None if out of bounds).
-fn find_landing_x(start: Vec2, velocity: Vec2, ammo: crate::game::types::AmmoType, wind: &crate::game::types::Wind, terrain: &Heightmap) -> Option<f32> {
-    use crate::physics::projectile::{simulate_shot, ShotOutcome};
-    let (_trail, outcome) = simulate_shot(start, velocity, ammo, wind, terrain);
-    match outcome {
-        ShotOutcome::TerrainHit { position } => Some(position.x),
-        ShotOutcome::OutOfBounds => None,
+    // Draw filled cone as triangle strips between lo and hi edges
+    for i in 0..len.saturating_sub(1) {
+        let t = i as f32 / len as f32;
+        let alpha = (1.0 - t) * 0.18; // fades out along the path
+
+        let lo1 = path_lo[i];
+        let lo2 = path_lo[i + 1];
+        let hi1 = path_hi[i];
+        let hi2 = path_hi[i + 1];
+
+        let fill = Color::new(cone_color.r, cone_color.g, cone_color.b, alpha);
+
+        // Two triangles to fill the quad between lo and hi edges
+        draw_triangle(
+            macroquad::math::Vec2::new(sm.x(lo1.x), sm.y(lo1.y)),
+            macroquad::math::Vec2::new(sm.x(hi1.x), sm.y(hi1.y)),
+            macroquad::math::Vec2::new(sm.x(lo2.x), sm.y(lo2.y)),
+            fill,
+        );
+        draw_triangle(
+            macroquad::math::Vec2::new(sm.x(hi1.x), sm.y(hi1.y)),
+            macroquad::math::Vec2::new(sm.x(hi2.x), sm.y(hi2.y)),
+            macroquad::math::Vec2::new(sm.x(lo2.x), sm.y(lo2.y)),
+            fill,
+        );
+    }
+
+    // Draw outer edge lines (subtle)
+    for i in 0..len.saturating_sub(1) {
+        let t = i as f32 / len as f32;
+        let alpha = (1.0 - t) * 0.2;
+        let edge = Color::new(cone_color.r, cone_color.g, cone_color.b, alpha);
+
+        let lo1 = path_lo[i];
+        let lo2 = path_lo[i + 1];
+        let hi1 = path_hi[i];
+        let hi2 = path_hi[i + 1];
+
+        draw_line(sm.x(lo1.x), sm.y(lo1.y), sm.x(lo2.x), sm.y(lo2.y), 1.0, edge);
+        draw_line(sm.x(hi1.x), sm.y(hi1.y), sm.x(hi2.x), sm.y(hi2.y), 1.0, edge);
+    }
+
+    // Center line — very faint dashed
+    for i in 0..len.saturating_sub(1) {
+        if (i / 3) % 2 != 0 {
+            continue;
+        }
+        let t = i as f32 / len as f32;
+        let alpha = (1.0 - t) * 0.15;
+        let c = Color::new(1.0, 1.0, 1.0, alpha);
+        let p1 = path_center[i];
+        let p2 = path_center[i + 1];
+        draw_line(sm.x(p1.x), sm.y(p1.y), sm.x(p2.x), sm.y(p2.y), 1.0, c);
     }
 }
 
