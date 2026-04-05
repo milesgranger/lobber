@@ -414,7 +414,7 @@ fn draw_health_bars(game: &GameState, sw: f32) {
 
         // Background panel
         let panel_w = bar_w + 16.0;
-        let panel_x = if is_left { x - 8.0 } else { x - 8.0 };
+        let panel_x = x - 8.0;
         draw_rectangle(panel_x, pad - 4.0, panel_w, 42.0, color_u8!(0, 0, 0, 140));
         draw_rectangle_lines(panel_x, pad - 4.0, panel_w, 42.0, 1.0, Color::new(color.r, color.g, color.b, 0.3));
 

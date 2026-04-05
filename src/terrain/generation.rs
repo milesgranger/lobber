@@ -49,9 +49,9 @@ fn midpoint_displace(
 }
 
 /// Simple moving average smoothing pass.
-fn smooth(heights: &mut Vec<f32>, passes: usize) {
+fn smooth(heights: &mut [f32], passes: usize) {
     for _ in 0..passes {
-        let copy = heights.clone();
+        let copy = heights.to_vec();
         for i in 1..heights.len() - 1 {
             heights[i] = (copy[i - 1] + copy[i] + copy[i + 1]) / 3.0;
         }

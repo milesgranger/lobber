@@ -1,4 +1,4 @@
-/// Game world constants.
+// Game world constants.
 
 /// Gravity acceleration (world units per second squared).
 pub const GRAVITY: f32 = 98.0;
@@ -56,12 +56,6 @@ pub const TANK_MOVE_BUDGET: f32 = 30.0;
 pub const TANK_MOVE_STEP: f32 = 3.0;
 
 // --- Rendering ---
-
-/// Target frames per second for TUI rendering.
-pub const TARGET_FPS: u32 = 30;
-
-/// Frame duration in milliseconds.
-pub const FRAME_DURATION_MS: u64 = 1000 / TARGET_FPS as u64;
 
 /// Projectile trail length (number of past positions to render).
 pub const TRAIL_LENGTH: usize = 15;

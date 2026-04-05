@@ -10,6 +10,7 @@ pub struct Heightmap {
     min_height: f32,
 }
 
+#[allow(dead_code)]
 impl Heightmap {
     pub fn new(heights: Vec<f32>, min_height: f32) -> Self {
         Self {

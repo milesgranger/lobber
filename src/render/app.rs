@@ -136,11 +136,12 @@ impl App {
     }
 
     pub fn handle_input(&mut self) {
-        if is_key_pressed(KeyCode::Q) || is_key_pressed(KeyCode::Escape) {
-            if matches!(self.game.phase, GamePhase::GameOver { .. }) || is_key_pressed(KeyCode::Escape) {
-                self.should_quit = true;
-                return;
-            }
+        if (is_key_pressed(KeyCode::Q) || is_key_pressed(KeyCode::Escape))
+            && (matches!(self.game.phase, GamePhase::GameOver { .. })
+                || is_key_pressed(KeyCode::Escape))
+        {
+            self.should_quit = true;
+            return;
         }
 
         if matches!(self.game.phase, GamePhase::GameOver { .. }) {
@@ -197,17 +198,17 @@ impl App {
                 }
             }
             GamePhase::Firing { .. } => {
-                if let Some(ref mut anim) = self.animation {
-                    if !anim.advance() {
-                        self.resolve_impact();
-                    }
+                if let Some(ref mut anim) = self.animation
+                    && !anim.advance()
+                {
+                    self.resolve_impact();
                 }
             }
             GamePhase::Resolving { .. } => {
-                if let Some(timer) = self.resolve_timer {
-                    if timer.elapsed() > std::time::Duration::from_millis(1500) {
-                        self.finish_turn();
-                    }
+                if let Some(timer) = self.resolve_timer
+                    && timer.elapsed() > std::time::Duration::from_millis(1500)
+                {
+                    self.finish_turn();
                 }
             }
             GamePhase::TurnTransition => {}

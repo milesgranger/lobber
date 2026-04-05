@@ -17,6 +17,7 @@ pub struct Projectile {
 
 /// Result of simulating a projectile to completion.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum ShotOutcome {
     /// Projectile hit the terrain at this position.
     TerrainHit { position: Vec2 },

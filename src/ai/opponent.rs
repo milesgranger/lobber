@@ -6,6 +6,7 @@ use crate::terrain::Heightmap;
 
 /// AI difficulty level — controls how accurate the computer's aim is.
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum AiDifficulty {
     Easy,
     Medium,

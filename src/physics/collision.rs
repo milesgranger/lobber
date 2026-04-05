@@ -45,6 +45,7 @@ pub fn check_terrain_collision(prev: Vec2, curr: Vec2, terrain: &Heightmap) -> O
 }
 
 /// Check if a point is below the terrain surface.
+#[allow(dead_code)]
 pub fn is_below_terrain(point: Vec2, terrain: &Heightmap) -> bool {
     let width = terrain.width() as f32;
     if point.x < 0.0 || point.x >= width {

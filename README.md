@@ -2,7 +2,7 @@
 
 An artillery game inspired by [Scorched Earth](https://en.wikipedia.org/wiki/Scorched_Earth_(video_game)) (1991), built in Rust with [macroquad](https://github.com/not-fl3/macroquad).
 
-<video src="demo.mp4" autoplay loop muted playsinline width="100%"></video>
+![Demo](demo.gif)
 
 ## Features
 
